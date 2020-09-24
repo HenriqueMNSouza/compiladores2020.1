@@ -4,6 +4,7 @@
 import ply.lex as lex
 
 reserved = {
+    'while' : 'WHILE',
     'if' : 'IF',
     'then' : 'THEN',
     'else' : 'ELSE'
@@ -19,11 +20,14 @@ tokens = [
     'GT',
     'ID',
     'NUMBER',
-    'RELOP'
+    'RELOP',
+    'STRING'
 ] + list(reserved.values())
 
 # A string containing ignored characters (spaces, tabs and newline)
 t_ignore  = ' \t\n'
+
+
 
 def t_LE(t):
     r'<='
@@ -56,16 +60,20 @@ def t_GT(t):
     return t
 
 def t_EQ(t):
-    r'='
+    r'=='
     t.type = 'RELOP'
     t.value = 'EQ'
     return t
 
 def t_ID(t):
-    r'[a-zA-Z][a-zA-Z0-9]*'
+    r'[_]?[a-zA-Z][a-zA-Z0-9]*'
     t.type = reserved.get(t.value,'ID') # Check for reserved words
     return t
 
+def t_STR(t):
+    r'\".*\"'
+    t.type = 'STRING'
+    return t
 # A regular expression rule with some action code
 def t_NUMBER(t):
     r'\d+'
