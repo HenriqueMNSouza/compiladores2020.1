@@ -156,7 +156,7 @@ class Num(ArithExp):
             ret = str(self.num())
         return ret
 
-        
+
     def num(self):
         return self.operand(0)
 
@@ -304,6 +304,52 @@ class Not(BoolExp):
         else:
             raise IllFormed(self, e)
 
+
+class ArrayInt(Statement):
+    def __init__(self, l):
+        if isinstance(l, list):
+            Statement.__init__(self, l)
+        else:
+            raise IllFormed(self, l)
+
+class ArraySize(Exp):
+    def __init(self, e):
+        if isinstance(e, ArrayInt) or isinstance(e, Id):
+            Exp.__init__(self, e)
+        else:
+            raise IllFormed(self, e)
+
+class ArrayIndex(Exp):
+    def __init__(self,n, e):
+        if isinstance(n, Id):
+            if isinstance(e, Exp):
+                Exp.__init__(self, n, e)
+            else:
+                raise IllFormed(self, e)
+        else:
+            raise IllFormed(self, n)
+
+class ArrayAppend(Exp):
+    def __init__(self, a1, a2):
+        if isinstance(a1, Exp) or isinstance(a1, ArrayInt):
+            if isinstance(a2, Exp) or isinstance(a2, ArrayInt):
+                Exp.__init__(self, a1, a2)
+            else:
+                raise IllFormed(self, a2)
+        else:
+            raise IllFormed(self, a2)
+
+class ArrayConcat(Exp):
+    def __init__(self, a, e):
+        if isinstance(a, Exp) or isinstance(a, ArrayInt):
+            if isinstance(e, Exp):
+                Exp.__init__(self, a, e)
+            else:
+                raise IllFormed(self, e)
+        else:
+            raise IllFormed(self, a)
+
+
 class ExpKW():
     SUM = "#SUM"
     SUB = "#SUB"
@@ -317,6 +363,12 @@ class ExpKW():
     AND = "#AND"
     OR = "#OR"
     NOT = "#NOT"
+    IDX = "#IDX"
+    SIZE = "#SIZE"
+    APPEND = "#APPEND"
+    CONCAT = "#CONCAT"
+    ASSGN = "#ASSGN"
+
 
 class ExpPiAut(PiAutomaton):
 
@@ -535,6 +587,86 @@ class ExpPiAut(PiAutomaton):
         self.pushVal(not v)
 
 
+    def __evalArrayInt(self, e):
+        f = e.operand(0)
+        self.pushVal(f)
+
+    def __evalArrayAppend(self, e):
+        x = e.operand(0)
+        y = e.operand(1)
+        self.pushCnt(ExpKW.APPEND)
+        self.pushCnt(x)
+        self.pushCnt(y)
+
+    def __evalArrayAppendKW(self):
+        x = self.popVal()
+        y = self.popVal()
+        self.pushVal(x + y)
+
+    def __evalArrayConcat(self, e):
+        x = e.operand(0)
+        y = e.operand(1)
+        self.pushCnt(ExpKW.CONCAT)
+        self.pushCnt(x)
+        self.pushCnt(y)
+
+    def __evalArrayConcatKW(self):
+        x = self.popVal()
+        y = self.popVal()
+        n = x.copy()
+        n.append(Num(y))
+        self.pushVal(n)
+
+    def __evalArrayIndex(self, e):
+        x = e.operand(0)
+        y = e.operand(1)
+        self.pushCnt(ExpKW.IDX)
+        self.pushCnt(x)
+        self.pushCnt(y)
+
+    def __evalArrayIndexKW(self):
+        x = self.popVal()
+        y = self.popVal()
+        self.pushVal(x[y])
+
+    def __evalListAssign(self, c):
+        x = c.operand(0)
+        y = c.operand(1)
+        z = c.operand(2)
+        self.pushVal(x.id())
+        self.pushVal(y)
+        self.pushCnt(ExpKW.ASSGN)
+        self.pushCnt(z)
+
+    def __evalListAssignKW(self):
+        x = self.popVal()
+        y = self.popVal()
+        z = self.popVal()
+        k = self.getBindable(z)
+        sto = self.sto()
+        if isinstance(y, Id):
+            aux = self.getBindable(y.id())
+            y = sto[aux]
+        ret = sto[k]
+        if (not isinstance(x, Num)):
+            x = Num(x)
+        if (isinstance(y, int)):
+            ret[y] = x
+        else:
+            ret[y.num()] = x
+        self.updateStore(k, ret)
+
+    def __evalArraySize(self, e):
+        x = e.operand(0)
+        self.pushCnt(ExpKW.SIZE)
+        self.pushCnt(x)
+
+    def __evalArraySizeKW(self):
+        x = self.popVal()
+        self.pushVal(len(x))
+
+
+
     def eval(self):
         e = self.popCnt()
         if isinstance(e, Sum):
@@ -589,6 +721,28 @@ class ExpPiAut(PiAutomaton):
             self.__evalNot(e)
         elif e == ExpKW.NOT:
             self.__evalNotKW()
+        elif isinstance(e, ArrayInt):
+            self.__evalArrayInt(e)
+        elif isinstance(e, ArrayIndex):
+            self.__evalArrayIndex(e)
+        elif e == ExpKW.IDX:
+            self.__evalArrayIndexKW()
+        elif isinstance(e, ArrayAppend):
+            self.__evalArrayAppend(e)
+        elif e == ExpKW.APPEND:
+            self.__evalArrayAppendKW()
+        elif isinstance(e, ArrayConcat):
+            self.__evalArrayConcat(e)
+        elif e == ExpKW.CONCAT:
+            self.__evalArrayConcatKW()
+        elif isinstance(e, ListAssign):
+            self.__evalListAssign(e)
+        elif e == ExpKW.ASSGN:
+            self.__evalListAssignKW()
+        elif isinstance(e, ArraySize):
+            self.__evalArraySize(e)
+        elif e == ExpKW.SIZE:
+            self.__evalArraySizeKW()
         else:
             raise EvaluationError( \
                 "Don't know how to evaluate " + str(e) + " of type " + str(type(e)) + "." + \
@@ -597,7 +751,7 @@ class ExpPiAut(PiAutomaton):
 #
 # Commands
 #
-        
+
 class Cmd(Statement):
     pass
 
@@ -625,6 +779,19 @@ class Print(Cmd):
 
     def exp(self):
         return self.operand(0)
+
+class ListAssign(Cmd):
+    def __init__(self, n, x, e):
+        if isinstance(n, Id):
+            if isinstance(x, Exp):
+                if isinstance(e, Exp):
+                    Cmd.__init__(self, n, x, e)
+                else:
+                    raise IllFormed(self, e)
+            else:
+                raise IllFormed(self, x)
+        else:
+            raise IllFormed(self, n)
 
 class Assign(Cmd):
 
@@ -666,7 +833,7 @@ class Cond(Cmd):
     def __init__(self, be, c1, c2):
         if isinstance(be, BoolExp):
             if isinstance(c1, Cmd):
-                if isinstance(c2, Cmd):                
+                if isinstance(c2, Cmd):
                     Cmd.__init__(self, be, c1, c2)
                 else:
                     raise IllFormed(self, c2)
@@ -716,7 +883,7 @@ class CmdKW:
     ASSIGN = "#ASSIGN"
     LOOP   = "#LOOP"
     COND   = "#COND"
-    PRINT  = "#PRINT" 
+    PRINT  = "#PRINT"
 
 class CmdPiAut(ExpPiAut):
 
@@ -765,7 +932,7 @@ class CmdPiAut(ExpPiAut):
 
     def __emmit(self, e):
         self["out"].append(e)
-        
+
     def __evalPrint(self, c):
         e = c.exp()
         self.pushCnt(CmdKW.PRINT)
@@ -774,7 +941,7 @@ class CmdPiAut(ExpPiAut):
     def __evalPrintKW(self):
         v = self.popVal()
         self.__emmit(v)
-        
+
     def __evalAssign(self, c):
         i = c.lvalue()
         e = c.rvalue()
@@ -810,8 +977,8 @@ class CmdPiAut(ExpPiAut):
         if t:
             self.pushCnt(c.then_branch())
         else:
-            self.pushCnt(c.else_branch())            
-        
+            self.pushCnt(c.else_branch())
+
     def __evalLoop(self, c):
         be = c.cond()
         bl = c.body()
@@ -871,7 +1038,7 @@ class CmdPiAut(ExpPiAut):
 #
 # Declarations
 #
-            
+
 class Dec(Statement):
     pass
 
@@ -885,7 +1052,7 @@ class Bind(Dec):
                 i = args[0]
                 e = args[1]
                 if isinstance(i, Id):
-                    if isinstance(e, Exp):
+                    if isinstance(e, Exp) or isinstance(e, ArrayInt):
                         Dec.__init__(self, i, e)
                     else:
                         raise IllFormed(self, e)
@@ -903,7 +1070,7 @@ class Bind(Dec):
 
 class Ref(Exp):
     def __init__(self, e):
-        if isinstance(e, Exp):
+        if isinstance(e, Exp) or isinstance(e, ArrayInt):
             Exp.__init__(self, e)
         else:
             raise IllFormed(self, e)
@@ -1051,12 +1218,6 @@ class DecPiAut(CmdPiAut):
             self.pushCnt(ld)
             self.pushVal(c)
         else:
-            # If the block has no declarations
-            # we need to save the environment because the
-            # evaluation of BLOCKCMD restores it.
-            # There could be an opcode to capture this 
-            # semantics such that saving and restoring an unchanged
-            # environment does not happen, as it is now.
             self.pushVal(self.env())
             self.pushCnt(DecCmdKW.BLKCMD)
             self.pushCnt(c)
@@ -1377,11 +1538,7 @@ class Rec(Closure):
         
 def unfold(e):
     return reclose(e, e)
-    # if isinstance(e, Env):
-    #     return reclose(e, e)
-    # else:
-    #     raise EvaluationError("Can't unfold term " + str(e) + \
-    #                           ". It is not an Environnment. It's type is " + str(type(e)) + ".")
+
 
 def reclose(e1, e2):
     if len(e2) >= 1:
@@ -1393,17 +1550,7 @@ def reclose(e1, e2):
                 e2[k] = v.setRecEnv(e1)
     return e2
 
-    # if isinstance(e2, Env):
-    #     if len(e2) >= 1:
-    #         for k, v in e2.items():
-    #             if isinstance(v, Closure):
-    #                 e2[k] = Rec(v.formals(), v.blk(), v.env(), e1)
-    #                 del v
-    #             elif isinstance(v, Rec):
-    #                 e2[k] = v.setRecEnv(e1)
-    #     return e2
-    # else:
-    #     raise EvaluationError(e2)
+
 
 class RecPiAut(AbsPiAut):
     def __evalRec(self, b):
@@ -1526,26 +1673,3 @@ def run(ast, color=True):
     t1 = datetime.datetime.now()
     out = aut.out()
     return (trace, step, out, (t1 - t0))
-
-# if __name__ == '__main__':
-#     # The classic iterative factorial example within a function.
-#     bl1 = Blk(Bind(Id("y"), Ref(Num(1))),
-#             CSeq(Assign(Id("y"), Id("x")),
-#                 Loop(Not(Eq(Id("y"), Num(0))),
-#                     CSeq(Assign(Id("z"), Mul(Id("z"), Id("y"))),
-#                         Assign(Id("y"), Sub(Id("y"), Num(1)))))))
-
-#     abs = Abs(Formals(Id("x")), bl1)
-#     ba = BindAbs(Id("fac"), abs)
-#     ast = Blk(Bind(Id("z"), Ref(Num(1))), Blk(ba, Call(Id("fac"), Actuals(Num(1500)))))
-
-#     try:
-#         (tr, ns, dt) = run(ast)
-#     except Exception as e:
-#         print('Evaluation error: ', e)
-#         exit()
-
-#     print('Last state of the π automaton:')
-#     print(tr[len(tr) - 2])
-#     print('Number of evaluation steps:', ns)
-#     print('Evaluation time:', dt)

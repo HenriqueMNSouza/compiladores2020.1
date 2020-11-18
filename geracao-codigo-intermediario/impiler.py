@@ -17,7 +17,9 @@ class Impiler(object):
     def un_exp(self, ast):
         if ast.op == "not":
             return pi.Not(ast.e)
-        
+        if ast.op == "::":
+            return pi.ArraySize(ast.e)
+
     def bin_exp(self, ast):
         if ast.op == "+":
             return pi.Sum(ast.e1, ast.e2)
@@ -40,7 +42,9 @@ class Impiler(object):
         elif ast.op == ">=":
             return pi.Ge(ast.e1, ast.e2)        
         elif ast.op == "==":
-            return pi.Eq(ast.e1, ast.e2)        
+            return pi.Eq(ast.e1, ast.e2)
+        elif ast.op == "<<":
+            return pi.ArrayConcat(ast.e1, ast.e2)
     
     def truth(self, ast):
         return pi.Boo(bool(ast))
@@ -151,3 +155,17 @@ class Impiler(object):
     def call(self, ast):
         actuals = [e for e in ast.a if e != ',']
         return pi.Call(ast.idn, actuals)
+
+    def array_int(self, ast):
+        if isinstance(ast.e, list):
+            return pi.ArrayInt(ast.e)
+        return pi.ArrayInt([ast.e])
+
+    def array_index(self, ast):
+        return pi.ArrayIndex(ast.idn, ast.e)
+
+    def array_assign(self, ast):
+        return pi.ListAssign(ast.idn, ast.idx, ast.e)
+
+    def array_append(self, ast):
+        return pi.ArrayAppend(ast.l1, ast.l2)

@@ -26,13 +26,13 @@
 
 start = [ds:decSeq] [cs:cmd_seq] $ ;
 
-exp = paren_exp | bin_exp | un_exp | @:atom ;
+exp = paren_exp | bin_exp | un_exp | array_index | array_append | array_int | @:atom ;
 
 paren_exp = "(" e:exp ")" ;
 
-bin_exp = e1:exp op:binop e2:exp ;
+bin_exp =  l:array_int op:binop e:exp |  e1:exp op:binop e2:exp ;
 
-un_exp = op:"not" e:exp ;
+un_exp = op:"not" e:exp | op:"::" e:exp ;
 
 atom = @:num_atom  | @:truth_atom | @:id_atom ;
 
@@ -42,7 +42,7 @@ truth_atom = truth ;
 
 id_atom = identifier ;
 
-binop = "and"| "or" | "==" | "<=" | ">=" | "<" | ">"  | "+" | "-" | "*" | "/"  ; 
+binop = "<<" | "and" | "or" | "==" | "<=" | ">=" | "<" | ">"  | "+" | "-" | "*" | "/"  ;
 
 truth = 'True' | 'False' ;
 
@@ -56,7 +56,7 @@ blk = "{" ds:decSeq cs:cmd_seq "}" ;
 
 cmd_seq = ";"%{ac:atom_cmd}+ ;
 
-atom_cmd = cond | loop | assign | print | call | skip ;
+atom_cmd = cond | loop |  assign | array_assign | print | call | skip ;
 
 skip = "skip" ;
 
@@ -86,5 +86,10 @@ call = idn:identifier '(' a:actual ')' ;
 
 actual = ','%{ exp }* ;
 
+array_int = "[" e:exp {','e:exp}* "]" ;
 
+array_index = idn:identifier"["e:exp"]" ;
 
+array_assign = idn:identifier"["idx:exp"]" op:":=" e:exp ;
+
+array_append = l1:exp "++" l2:exp | l1:array_int "++" l2:array_int | l1:exp "++" l2:array_int | l1:array_int "++" l2:exp;
