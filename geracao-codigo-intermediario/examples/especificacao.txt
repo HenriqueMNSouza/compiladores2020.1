@@ -1,0 +1,45 @@
+# Especificações das alterações feitas.
+
+# Gramática: #
+
+# Adicionados:
+array_int = "[" e:exp {','e:exp}* "]" ;
+
+array_index = idn:identifier"["e:exp"]" ;
+
+array_assign = idn:identifier"["idx:exp"]" op:":=" e:exp ;
+
+array_append = l1:exp "++" l2:exp | l1:array_int "++" l2:array_int | l1:exp "++" l2:array_int | l1:array_int "++" l2:exp;
+
+# Sofreram alterações:
+atom_cmd = cond | loop |  assign | array_assign | print | call | skip ;
+
+binop = "<<" | "and" | "or" | "==" | "<=" | ">=" | "<" | ">"  | "+" | "-" | "*" | "/"  ;
+
+bin_exp =  l:array_int op:binop e:exp |  e1:exp op:binop e2:exp ;
+
+un_exp = op:"not" e:exp | op:"::" e:exp ;
+
+exp = paren_exp | bin_exp | un_exp | array_index | array_append | array_int | @:atom ;
+
+# Pi denotações#
+ Adicionado o simbolo "::" para array_size e "<<" para array_append
+
+# Pi framework #
+
+Adicionados funções de operação com array de inteiros:
+- ArrayInt -> Declaração array de inteiros.
+- ArraySize -> Retorna o tamanho da array.
+- ArrayIndex -> Retorna o valor do array na posicao X.
+- ArrayAppend -> Adiciona um elemento ao array de inteiros.
+- ArrayConcat -> Concatena 2 elementos.
+
+Tokens para as operações criadas:
+- #IDX
+- #SIZE
+- #APPEND
+- #CONCAT
+- #ASSGN
+
+Token para comandos do sistema:
+- #PRINT 

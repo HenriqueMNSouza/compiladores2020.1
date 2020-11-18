@@ -1052,7 +1052,7 @@ class Bind(Dec):
                 i = args[0]
                 e = args[1]
                 if isinstance(i, Id):
-                    if isinstance(e, Exp) or isinstance(e, ArrayInt):
+                    if isinstance(e, Exp):
                         Dec.__init__(self, i, e)
                     else:
                         raise IllFormed(self, e)
@@ -1218,6 +1218,12 @@ class DecPiAut(CmdPiAut):
             self.pushCnt(ld)
             self.pushVal(c)
         else:
+            # If the block has no declarations
+            # we need to save the environment because the
+            # evaluation of BLOCKCMD restores it.
+            # There could be an opcode to capture this
+            # semantics such that saving and restoring an unchanged
+            # environment does not happen, as it is now.
             self.pushVal(self.env())
             self.pushCnt(DecCmdKW.BLKCMD)
             self.pushCnt(c)
@@ -1538,6 +1544,11 @@ class Rec(Closure):
         
 def unfold(e):
     return reclose(e, e)
+    # if isinstance(e, Env):
+    #     return reclose(e, e)
+    # else:
+    #     raise EvaluationError("Can't unfold term " + str(e) + \
+    #                           ". It is not an Environnment. It's type is " + str(type(e)) + ".")
 
 
 def reclose(e1, e2):
@@ -1550,6 +1561,17 @@ def reclose(e1, e2):
                 e2[k] = v.setRecEnv(e1)
     return e2
 
+    # if isinstance(e2, Env):
+    #     if len(e2) >= 1:
+    #         for k, v in e2.items():
+    #             if isinstance(v, Closure):
+    #                 e2[k] = Rec(v.formals(), v.blk(), v.env(), e1)
+    #                 del v
+    #             elif isinstance(v, Rec):
+    #                 e2[k] = v.setRecEnv(e1)
+    #     return e2
+    # else:
+    #     raise EvaluationError(e2)
 
 
 class RecPiAut(AbsPiAut):
@@ -1673,3 +1695,23 @@ def run(ast, color=True):
     t1 = datetime.datetime.now()
     out = aut.out()
     return (trace, step, out, (t1 - t0))
+
+# if __name__ == '__main__':
+#     # The classic iterative factorial example within a function.
+#     bl1 = Blk(Bind(Id("y"), Ref(Num(1))),
+#             CSeq(Assign(Id("y"), Id("x")),
+#                 Loop(Not(Eq(Id("y"), Num(0))),
+#                     CSeq(Assign(Id("z"), Mul(Id("z"), Id("y"))),
+#                         Assign(Id("y"), Sub(Id("y"), Num(1)))))))
+#     abs = Abs(Formals(Id("x")), bl1)
+#     ba = BindAbs(Id("fac"), abs)
+#     ast = Blk(Bind(Id("z"), Ref(Num(1))), Blk(ba, Call(Id("fac"), Actuals(Num(1500)))))
+#     try:
+#         (tr, ns, dt) = run(ast)
+#     except Exception as e:
+#         print('Evaluation error: ', e)
+#         exit()
+#     print('Last state of the π automaton:')
+#     print(tr[len(tr) - 2])
+#     print('Number of evaluation steps:', ns)
+#     print('Evaluation time:', dt)
