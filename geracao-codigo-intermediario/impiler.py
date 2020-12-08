@@ -169,3 +169,6 @@ class Impiler(object):
 
     def array_append(self, ast):
         return pi.ArrayAppend(ast.l1, ast.l2)
+
+    def _return(self,ast):
+        return pi.Return(ast.e)

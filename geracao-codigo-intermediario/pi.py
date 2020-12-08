@@ -368,6 +368,7 @@ class ExpKW():
     APPEND = "#APPEND"
     CONCAT = "#CONCAT"
     ASSGN = "#ASSGN"
+    RETURN = "#RETURN"
 
 
 class ExpPiAut(PiAutomaton):
@@ -665,6 +666,28 @@ class ExpPiAut(PiAutomaton):
         x = self.popVal()
         self.pushVal(len(x))
 
+    def __evalReturn(self,e):
+        x = e.operand(0)
+        self.pushCnt(ExpKW.RETURN)
+        self.pushCnt(x)
+
+    def __evalReturnKW(self):
+        x = self.popVal()
+        y = self.popVal()
+
+        while isinstance(y,list) or isinstance(y,dict):
+            y = self.popVal()
+
+        env = self.popVal()
+        self['val'] = [[],[],{}]
+        self.pushVal(env)
+        self.pushVal(y)
+        self.pushVal(x)
+        c = self.popCnt()
+        while c == '#BLKCMD':
+            c = self.popCnt()
+        self.pushCnt(c)
+
 
 
     def eval(self):
@@ -743,6 +766,10 @@ class ExpPiAut(PiAutomaton):
             self.__evalArraySize(e)
         elif e == ExpKW.SIZE:
             self.__evalArraySizeKW()
+        elif e == ExpKW.RETURN:
+            self.__evalReturnKW()
+        elif isinstance(e, Return):
+            self.__evalReturn(e)
         else:
             raise EvaluationError( \
                 "Don't know how to evaluate " + str(e) + " of type " + str(type(e)) + "." + \
@@ -797,7 +824,7 @@ class Assign(Cmd):
 
     def __init__(self, i, e):
         if isinstance(i, Id):
-            if isinstance(e, Exp):
+            if isinstance(e, Exp) or isinstance(e, ArrayInt) or isinstance(e, ArraySize) or isinstance(e, Call):
                 Cmd.__init__(self, i, e)
             else:
                 raise IllFormed(self, e)
@@ -812,6 +839,12 @@ class Assign(Cmd):
     def rvalue(self):
         return self.operand(1)
 
+class Return(Cmd):
+    def __init__(self,e):
+        if isinstance(e,Exp):
+            Cmd.__init__(self,e)
+        else:
+            raise IllFormed(self,e)
 
 class Loop(Cmd):
     def __init__(self, be, c):
@@ -1070,7 +1103,7 @@ class Bind(Dec):
 
 class Ref(Exp):
     def __init__(self, e):
-        if isinstance(e, Exp) or isinstance(e, ArrayInt):
+        if isinstance(e, Exp):# or isinstance(e, ArrayInt):
             Exp.__init__(self, e)
         else:
             raise IllFormed(self, e)

@@ -23,10 +23,11 @@
 @@keyword :: 'skip'
 @@keyword :: '{' '}'
 @@keyword :: 'print'
+@@keyword :: 'return'
 
 start = [ds:decSeq] [cs:cmd_seq] $ ;
 
-exp = paren_exp | bin_exp | un_exp | array_index | array_append | array_int | @:atom ;
+exp = call | paren_exp | bin_exp | un_exp | array_index | array_append | array_int | @:atom ;
 
 paren_exp = "(" e:exp ")" ;
 
@@ -56,7 +57,7 @@ blk = "{" ds:decSeq cs:cmd_seq "}" ;
 
 cmd_seq = ";"%{ac:atom_cmd}+ ;
 
-atom_cmd = cond | loop |  assign | array_assign | print | call | skip ;
+atom_cmd = cond | loop |  assign | array_assign | print | call | skip | _return ;
 
 skip = "skip" ;
 
@@ -93,3 +94,5 @@ array_index = idn:identifier"["e:exp"]" ;
 array_assign = idn:identifier"["idx:exp"]" op:":=" e:exp ;
 
 array_append = l1:exp "++" l2:exp | l1:array_int "++" l2:array_int | l1:exp "++" l2:array_int | l1:array_int "++" l2:exp;
+
+_return = op:"return" e:exp;

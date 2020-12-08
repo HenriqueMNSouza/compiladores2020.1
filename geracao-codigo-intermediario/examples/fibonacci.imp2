@@ -1,0 +1,30 @@
+var ant = 0 ;
+var pos = 1 ;
+var aux = 0 ;
+var count = 0 ;
+var p = 1 ;
+
+#caso x = 0, nao executa e retorna 1
+#caso x = 1, nao executa e retorna 1
+#caso x = 2, nao executa e retorna 2
+#caso x = 3, nao executa e retorna 3
+#caso x = 4, nao executa e retorna 5
+
+def fib (x) {
+    ant := 0 ;
+    pos := 1 ;
+
+    count := 0;
+
+    while ( count < x ){
+        count := count + 1;
+        aux := pos;
+        pos := ant + pos;
+        ant := aux
+
+    };
+    return pos
+}
+
+p := fib(5) ;
+print(p)

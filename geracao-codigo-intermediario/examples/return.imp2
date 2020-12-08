@@ -1,0 +1,9 @@
+var p = 0;
+def ret (x) {
+    return x
+}
+
+p := ret(10) ;
+
+print(p)
+
